@@ -1,26 +1,57 @@
     class BaseField extends React.Component{
         constructor(props){
             super(props);
+            let self=this;
             let cells=[];
             for(let i=0;i<this.props.height;i++){
                 cells[i]=[];
                 for (let j=0;j<this.props.width;j++){
                     cells[i][j]={
                         value:'-',
-                        timer:null,
+                        receivedTime:null,
                         opacityValue:1.0,
                         isSelected:false
                     }
                 }
             }
             this.state={
-                cells:cells
+                cells:cells,
+                timer:null
             };
         }
 
-        changeState(cells){
-            this.setState({cells:cells});
+        componentDidMount(){
+            if (this.state.timer)
+                clearInterval(this.state.timer);
+            this.state.timer=setInterval(this.componentStateHandler.bind(this),500);
         }
+
+        componentStateHandler(){
+            for(let i=0;i<this.state.cells.length;i++){
+                for (let j=0;j<this.state.cells[i].length;j++){
+                    if (this.state.cells[i][j].receivedTime){
+                        let exprTime=new Date();
+                        exprTime.setSeconds(exprTime.getSeconds());
+                        let diffTime=Math.trunc((exprTime-this.state.cells[i][j].receivedTime)/1000);
+                        if (diffTime>=0 && diffTime<=5){
+                            let opacityValueToSet=1-10/5*diffTime/10;
+                            this.state.cells[i][j].opacityValue=opacityValueToSet;
+                            if (opacityValueToSet<=0){
+                                this.state.cells[i][j].isSelected=false;
+                            }
+                        }
+                        else{
+                            this.state.cells[i][j].receivedTime=null;
+                        }
+                    }
+                }
+            }
+            this.setState({cells:this.state.cells});
+        }
+
+        /*changeState(cells){
+            this.setState({cells:cells});
+        }*/
 
         render(){
             let extraCells=[];
@@ -50,7 +81,7 @@
             };
         }
 
-        cellUpdate(i,j){
+        /*cellUpdate(i,j){
             if (this.state.cells[i][j].opacityValue>0){
                 this.state.cells[i][j].opacityValue-=0.2;
                 this.props.parent.setState({cells:this.state.cells});
@@ -61,20 +92,20 @@
                 
                 this.props.parent.setState({cells:this.state.cells});
             }
-        }
+        }*/
 
         cellEventHandler(i,j,value=null, isMouseClick=false){
-            if (this.state.cells[i][j].timer){
+            /*if (this.state.cells[i][j].timer){
                     clearInterval(this.state.cells[i][j].timer);
-                }
+                }*/
             if (value){
                 this.state.cells[i][j].value=value;
             }
             if (isMouseClick)
                 this.state.cells[i][j].isSelected=true;
             else{
-                this.state.cells[i][j].opacityValue=1.0;
-                this.state.cells[i][j].timer=setInterval(this.cellUpdate.bind(this),1000,i,j);
+                this.state.cells[i][j].receivedTime=new Date();
+                //this.state.cells[i][j].timer=setInterval(this.cellUpdate.bind(this),1000,i,j);
             }
             
 
@@ -84,7 +115,7 @@
         render(){
             return (<table>
                     <tbody>
-                        {this.state.cells.map((item,index)=> (<tr key={index}>{item.map((cell,cellIndex)=> <TableCell key={index+'_'+cellIndex} isSelected={item.isSelected} value={cell.value} opacityValue={cell.opacityValue} onClick={()=>this.cellEventHandler(index,cellIndex,null,true)}/>)}</tr> ))}
+                        {this.state.cells.map((item,index)=> (<tr key={index}>{item.map((cell,cellIndex)=> <TableCell key={index+'_'+cellIndex} receivedTime={item.receivedTime} isSelected={item.isSelected} value={cell.value} opacityValue={cell.opacityValue} onClick={()=>this.cellEventHandler(index,cellIndex,null,true)}/>)}</tr> ))}
                     </tbody>
                 </table>);
         }
@@ -106,7 +137,7 @@
         }
 
         shouldComponentUpdate() {
-            return this.props.value!='-' || this.props.isSelected;
+            return this.props.receivedTime!==null || this.props.opacityValue>0 || this.props.isSelected===true;
         }
 
         render(){
